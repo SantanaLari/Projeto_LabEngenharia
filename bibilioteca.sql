@@ -1,7 +1,50 @@
-create database bibilioteca1
+use livraria
+
+CREATE TABLE Funcionario
+(
+email			VARCHAR(100),
+senha			VARCHAR(20),
+confirmaSenha	VARCHAR(20),
+cargo			VARCHAR(100),
+RF				VARCHAR(20),
+PRIMARY KEY(email)
+)
 go
-use bibilioteca1
-go
+CREATE TABLE Estudante
+(
+email			VARCHAR(100),
+senha			VARCHAR(20),
+confirmaSenha	VARCHAR(20),
+curso			VARCHAR(100),
+RA				VARCHAR(20),
+PRIMARY KEY(email)
+)
+
+select nome, autor from livro WHERE disponibilidade != 'sim'
+
+insert into locacao values
+(1, 'aa', '10/12/2002', '15/01/2003')
+
+SELECT * FROM locacao
+
+SELECT * FROM estudante
+SELECT * FROM funcionario
+
+select * from livro
+
+select nome, autor, disponibilidade
+from livro
+
+CREATE VIEW v_cadastros
+AS
+SELECT email, curso, RA
+FROM Estudante
+UNION
+SELECT email, cargo, RF
+FROM Funcionario
+
+select * from v_cadastros
+
 create table livro(
 id int,
 nome varchar(50),
@@ -13,16 +56,20 @@ caminho varchar(25),
 disponibilidade varchar(3)
 primary key(id)
 )
-go
+
 create table locacao(
 id int,
-livro int,
-dataIni date,
-dataFim date
+email varchar(50),
+dataIni varchar(10),
+dataFim varchar(10)
 primary key(id)
-foreign key(livro) references livro(id)
 )
-go
+
+insert into locacao values
+(1, 'teste', '10', '10')
+
+drop table locacao
+
  INSERT INTO livro VALUES
  --( '--------------------------------------------------', '------------------------------', '------------------------------'),
  (1, '1 Busines Venture: with pratice for the TOEIC test', 'Roger Barnard e Jeff Cady', 'Oxford', 2009, 'Outro', '/webapp/img/livro1.png', 'sim'),
@@ -41,6 +88,11 @@ go
 (14, 'Intercambio Comercial e Agronegocio', 'Ministério da Agricultura', 'Mapa', 2010, 'Outro', '/webapp/img/livro14.png', 'sim'),
 (15, 'Marley & Eu', 'John Grogan', 'Ediouro', 2006, 'Outro', '/webapp/img/livro15.png', 'sim'),
 (16, 'A Menina que Roubava Livros', 'Markus Zusak', 'Intrínseca', 2011, 'Outro', '/webapp/img/livro16.png', 'sim')
+
+
+INSERT INTO livro VALUES
+(20, 'teste', 'teste', 'teste', 2009, 'Outro', 'teste', 'nao')
+
 
 --PROCEDURE PARA ATUALIZAR LIVRO
 create procedure p_atualizaLivro(@id int)
@@ -70,8 +122,22 @@ create procedure p_devolucao(@id int)
 as
 	EXEC p_Disponibilidade @id, 'Sim'
  
+--FUNCTION QUE RETORNA A TABELA DE LOCACAO
+CREATE FUNCTION fn_locacao()
+RETURNS @locacao TABLE (
+livro INT,
+dataIni DATE,
+dataFim DATE
+)
+AS
+BEGIN
+	INSERT INTO @locacao(livro, dataIni, dataFim)
+		SELECT livro, dataIni, dataFim FROM locacao
+	RETURN 
+END
+
 --PROCEDURE INSERIR LOCACAO DE LIVRO
-create procedure p_locacao(@nome varchar(30))
+create procedure p_locacao(@nome varchar(30), @email varchar(30))
 as
 	declare @id int,
 		    @dataIni date,
@@ -83,44 +149,7 @@ as
 	update locacao
 	set livro = @nome, dataIni = @dataIni, dataFim = @dataFim
 	EXEC p_Disponibilidade @id, 'Não'
- 
---FUNCTION QUE RETORNA A TABELA DE LOCACAO
-CREATE FUNCTION fn_locacao()
-RETURNS @locacao TABLE (
-id INT,
-livro INT,
-dataIni DATE,
-dataFim DATE
-)
-AS
-BEGIN
-	INSERT INTO @locacao(id, livro, dataIni, dataFim)
-		SELECT id, livro, dataIni, dataFim FROM locacao
-	RETURN 
-END
-
---FUNCTION QUE RETORNA LIVROS POR AREA
-CREATE FUNCTION fn_livroarea(@pesquisa varchar(250))
-RETURNS @table TABLE (
-nome VARCHAR (30),
-disponibilidade VARCHAR (3),
-caminho VARCHAR (25)
-)
-AS
-BEGIN
-	DECLARE @id int,
-			@nome varchar(30), 
-			@disponibilidade varchar(3), 
-			@caminho varchar(25)
-
-	SET @nome = (SELECT nome FROM livro WHERE area = @pesquisa)
-	SET @id = (SELECT id FROM livro WHERE nome = @nome)
-	SET @disponibilidade = (SELECT disponibilidade FROM livro WHERE id = @id)
-	SET @caminho = (SELECT caminho FROM livro WHERE id = @id)
-
-	INSERT INTO @table VALUES (@nome, @disponibilidade, @caminho)
-	RETURN
-END
+	EXEC dbo.fn_locacao()
 
 --FUNCTION QUE RETORNA LIVROS POR NOME
 CREATE FUNCTION fn_livronome(@pesquisa varchar(250))
@@ -144,3 +173,104 @@ BEGIN
 	INSERT INTO @table VALUES (@nome, @disponibilidade, @caminho)
 	RETURN
 END
+
+select nome from livro
+
+--------------------------------------- PROCEDURES
+--------------------------------------- FUNCIONARIO
+
+CREATE PROCEDURE validaFuncionario(@email VARCHAR(100), @senha VARCHAR(20), @confirmaSenha VARCHAR(20),
+		@cargo VARCHAR(100), @RF VARCHAR(20))
+AS
+	DECLARE @validaFuncionario INT,
+			@validaEstudante INT
+
+	SET @validaFuncionario = (SELECT COUNT(*) FROM Funcionario WHERE email = @email)
+	SET @validaEstudante = (SELECT COUNT(*) FROM Estudante WHERE email = @email)
+
+	IF ((@validaFuncionario = 1) OR (@validaEstudante = 1))
+	BEGIN
+		RAISERROR('Esse e-mail já está cadastrado no sistema',16,1)
+	END
+	ELSE
+	BEGIN
+		PRINT 'email valido'
+
+		IF(@senha = @confirmaSenha)
+		BEGIN
+			PRINT 'Senhas iguais'
+			INSERT INTO Funcionario VALUES
+			(@email, @senha, @confirmaSenha, @cargo, @RF)
+		END
+		ELSE 
+		BEGIN
+			RAISERROR('As senhas não são iguais',16,1)
+		END
+	END
+----------------------------------------- ESTUDANTE
+CREATE PROCEDURE validaEstudante(@email VARCHAR(100), @senha VARCHAR(20), @confirmaSenha VARCHAR(20),
+		@curso VARCHAR(100), @RA VARCHAR(20))
+AS
+	DECLARE @validaFuncionario INT,
+			@validaEstudante INT
+
+	SET @validaFuncionario = (SELECT COUNT(*) FROM Funcionario WHERE email = @email)
+	SET @validaEstudante = (SELECT COUNT(*) FROM Estudante WHERE email = @email)
+
+	IF ((@validaFuncionario = 1) OR (@validaEstudante = 1))
+	BEGIN
+		RAISERROR('Esse e-mail já está cadastrado no sistema',16,1)
+	END
+	ELSE
+	BEGIN
+		PRINT 'email valido'
+
+		IF(@senha = @confirmaSenha)
+		BEGIN
+			PRINT 'Senhas iguais'
+			INSERT INTO Estudante VALUES
+			(@email, @senha, @confirmaSenha, @curso, @RA)
+		END
+		ELSE 
+		BEGIN
+			RAISERROR('As senhas não são iguais',16,1)
+		END
+	END
+
+------------------------------------ LOGIN
+CREATE PROCEDURE p_validaLogin(@e VARCHAR(100), @s VARCHAR(100))
+AS
+	DECLARE @validaFuncionario INT,
+			@validaEstudante INT,
+			@senha INT
+
+	SET @validaFuncionario = (SELECT COUNT(*) FROM Funcionario WHERE email = @e)
+	SET @validaEstudante = (SELECT COUNT(*) FROM Estudante WHERE email = @e)
+	
+
+	IF(@validaFuncionario = 1) --O email é de funcionario
+	BEGIN
+		SET @senha = (SELECT COUNT(*) FROM Funcionario WHERE senha = @s)
+		IF(@senha = 0)
+		BEGIN
+			RAISERROR('Email ou senha incorreto',16,1)
+		END
+		ELSE
+		BEGIN
+			PRINT 'Bem-vindo'
+		END
+	END
+	ELSE
+	IF(@validaEstudante = 1) --O email é de estudante
+	BEGIN
+		SET @senha = (SELECT COUNT(*) FROM Estudante WHERE senha = @s)
+		IF(@senha = 0)
+		BEGIN
+			RAISERROR('Email ou senha incorreto',16,1)
+		END
+		ELSE
+		BEGIN
+			PRINT 'Bem-vindo'
+		END
+	END
+
