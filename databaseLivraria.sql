@@ -34,15 +34,40 @@ disponibilidade	VARCHAR(4)
 PRIMARY KEY(id)
 )
 
+select nome, autor from livro WHERE disponibilidade != 'sim'
+
 CREATE TABLE locacao
 (
 id		INT,
-livro	INT,
-dataIni	DATE,
-dataFim	DATE
-PRIMARY KEY(id),
-FOREIGN KEY(livro) REFERENCES livro(id)
+email	VARCHAR(100),
+dataIni	VARCHAR(20),
+dataFim	VARCHAR(20),
+PRIMARY KEY(id)
 )
+drop table locacao
+
+insert into locacao values
+(1, 'aa', '10/12/2002', '15/01/2003')
+
+SELECT * FROM locacao
+
+SELECT * FROM estudante
+SELECT * FROM funcionario
+
+select * from livro
+
+select nome, autor, disponibilidade
+from livro
+
+CREATE VIEW v_cadastros
+AS
+SELECT email, curso, RA
+FROM Estudante
+UNION
+SELECT email, cargo, RF
+FROM Funcionario
+
+select * from v_cadastros
 
 --------------------------------------- PROCEDURES
 --------------------------------------- FUNCIONARIO
@@ -163,3 +188,5 @@ AS
 
 
 select * from livro
+
+
